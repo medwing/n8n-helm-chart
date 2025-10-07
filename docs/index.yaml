@@ -1,0 +1,45 @@
+apiVersion: v1
+entries:
+  n8n:
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: changed
+          description: "Update n8n app version to 1.112.0"
+      artifacthub.io/prerelease: "false"
+    apiVersion: v2
+    appVersion: 1.112.0
+    created: "2025-10-07T13:54:19.508118+02:00"
+    dependencies:
+    - condition: valkey.enabled
+      name: valkey
+      repository: oci://registry-1.docker.io/bitnamicharts
+      version: 2.4.7
+    description: Helm Chart for deploying n8n on Kubernetes, a fair-code workflow
+      automation platform with native AI capabilities for technical teams. Easily
+      automate tasks across different services.
+    digest: 67beb4afaf75849cce2c9270d13d34e68c92392f2a2e8272aff81649f59c99b1
+    home: https://github.com/8gears/n8n-helm-chart
+    icon: https://avatars1.githubusercontent.com/u/45487711?s=200&v=4
+    keywords:
+    - Workflow Automation
+    - Workflow
+    - iPaaS
+    - integration-framework
+    - low-code-plattform
+    - low-code
+    maintainers:
+    - email: contact@8gears.com
+      name: 8gears
+      url: https://github.com/8gears
+    - email: _@8gears.com
+      name: n8n
+      url: https://github.com/n8n-io
+    name: n8n
+    sources:
+    - https://github.com/n8n-io/n8n
+    - https://n8n.io/
+    type: application
+    urls:
+    - https://grantmoxom.github.io/n8n-helm-chart/n8n-1.0.15.tgz
+    version: 1.0.15
+generated: "2025-10-07T13:54:19.490761+02:00"
