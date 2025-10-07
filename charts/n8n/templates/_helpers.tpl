@@ -103,3 +103,48 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
 
+{{/* Determine whether internal task runners are enabled */}}
+{{- define "n8n.taskRunnerEnabled" -}}
+{{- $preset := default "" .Values.preset -}}
+{{- $mode := default "" .Values.main.taskRunners.mode -}}
+{{- if or (eq $preset "taskrunners") (eq $mode "internal") -}}
+true
+{{- else -}}
+false
+{{- end -}}
+{{- end -}}
+
+
+{{/* Default environment variables for internal task runners */}}
+{{- define "n8n.mainPresetEnv" -}}
+{{- $env := dict -}}
+{{- if eq (include "n8n.taskRunnerEnabled" . | trim) "true" -}}
+  {{- $_ := set $env "N8N_RUNNERS_ENABLED" (dict "value" "true") -}}
+  {{- $_ := set $env "OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS" (dict "value" "false") -}}
+  {{- $_ := set $env "EXECUTIONS_MODE" (dict "value" (default "queue" .Values.main.taskRunners.executionsMode)) -}}
+{{- end -}}
+{{- toYaml $env -}}
+{{- end -}}
+
+
+{{/* Merge preset driven environment variables with user provided ones */}}
+{{- define "n8n.mainMergedExtraEnv" -}}
+{{- $presetRaw := include "n8n.mainPresetEnv" . -}}
+{{- $preset := dict -}}
+{{- if $presetRaw -}}
+  {{- $preset = fromYaml $presetRaw -}}
+{{- end -}}
+{{- $user := default (dict) .Values.main.extraEnv -}}
+{{- $merged := merge (deepCopy $preset) (deepCopy $user) -}}
+{{- toYaml $merged -}}
+{{- end -}}
+
+
+{{/* Validate task runner and webhook combinations */}}
+{{- define "n8n.validateTaskRunners" -}}
+{{- if and .Values.webhook.enabled (not .Values.worker.enabled) (eq (include "n8n.taskRunnerEnabled" . | trim) "true") -}}
+{{- fail "External webhook pods rely on external workers when task runners are enabled. Disable webhooks or enable workers." -}}
+{{- end -}}
+{{- end -}}
+
+
