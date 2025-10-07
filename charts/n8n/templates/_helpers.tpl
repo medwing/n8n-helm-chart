@@ -103,63 +103,25 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
 
-{{/* Determine whether internal task runners are enabled */}}
-{{- define "n8n.taskRunnerEnabled" -}}
-{{- $preset := default "" .Values.preset -}}
-{{- $mode := default "" .Values.main.taskRunners.mode -}}
-{{- if or (eq $preset "taskrunners") (eq $mode "internal") -}}
-true
-{{- else -}}
-false
-{{- end -}}
-{{- end -}}
-
-
-{{/* Default environment variables for internal task runners */}}
-{{- define "n8n.mainPresetEnv" -}}
+{{/* Normalize extraEnv structures (map or legacy list) into a map */}}
+{{- define "n8n.normalizeExtraEnv" -}}
+{{- $envRaw := default (dict) . -}}
 {{- $env := dict -}}
-{{- if eq (include "n8n.taskRunnerEnabled" . | trim) "true" -}}
-  {{- $_ := set $env "N8N_RUNNERS_ENABLED" (dict "value" "true") -}}
-  {{- $_ := set $env "OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS" (dict "value" "false") -}}
-  {{- $_ := set $env "EXECUTIONS_MODE" (dict "value" (default "queue" .Values.main.taskRunners.executionsMode)) -}}
-{{- end -}}
-{{- toYaml $env -}}
-{{- end -}}
-
-
-{{/* Merge preset driven environment variables with user provided ones */}}
-{{- define "n8n.mainMergedExtraEnv" -}}
-{{- $presetRaw := include "n8n.mainPresetEnv" . -}}
-{{- $preset := dict -}}
-{{- if $presetRaw -}}
-  {{- $preset = fromYaml $presetRaw -}}
-{{- end -}}
-{{- $userRaw := default (dict) .Values.main.extraEnv -}}
-{{- $user := dict -}}
-{{- if kindIs "map" $userRaw -}}
-  {{- $user = $userRaw -}}
-{{- else if kindIs "slice" $userRaw -}}
-  {{- range $env := $userRaw -}}
-    {{- if hasKey $env "name" -}}
-      {{- $entry := dict -}}
-      {{- range $k, $v := $env -}}
+{{- if kindIs "map" $envRaw -}}
+  {{- $env = $envRaw -}}
+{{- else if kindIs "slice" $envRaw -}}
+  {{- range $entry := $envRaw -}}
+    {{- if and (hasKey $entry "name") $entry.name -}}
+      {{- $key := printf "%v" $entry.name -}}
+      {{- $value := dict -}}
+      {{- range $k, $v := $entry -}}
         {{- if ne $k "name" -}}
-          {{- $_ := set $entry $k $v -}}
+          {{- $_ := set $value $k $v -}}
         {{- end -}}
       {{- end -}}
-      {{- $_ := set $user ($env.name | toString) $entry -}}
+      {{- $_ := set $env $key $value -}}
     {{- end -}}
   {{- end -}}
 {{- end -}}
-{{- $merged := merge (deepCopy $preset) (deepCopy $user) -}}
-{{- toYaml $merged -}}
+{{- toYaml $env -}}
 {{- end -}}
-
-
-{{/* Validate task runner and webhook combinations */}}
-{{- define "n8n.validateTaskRunners" -}}
-{{- if and .Values.webhook.enabled (not .Values.worker.enabled) (eq (include "n8n.taskRunnerEnabled" . | trim) "true") -}}
-{{- fail "External webhook pods rely on external workers when task runners are enabled. Disable webhooks or enable workers." -}}
-{{- end -}}
-{{- end -}}
-

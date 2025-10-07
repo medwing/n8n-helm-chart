@@ -1,12 +1,10 @@
 {{- if .Values.webhook.enabled }}
 {{- /* Validate Valkey/Redis configuration */}}
 {{- include "n8n.validateValkey" . }}
-{{- include "n8n.validateTaskRunners" . }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "n8n.fullname" . }}-webhook
-  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "n8n.labels" . | nindent 4 }}
     {{- if .Values.webhook.deploymentLabels }}
@@ -75,7 +73,7 @@ spec:
           {{- end }}
           ports:
             - name: http
-              containerPort: {{ get (default (dict) .Values.webhook.config.n8n) "port" | default 5678 }}
+              containerPort: {{ get (default (dict) .Values.webhook.config) "port" | default 5678 }}
               protocol: TCP
           {{- with .Values.webhook.livenessProbe }}
           livenessProbe:
@@ -102,12 +100,20 @@ spec:
             - secretRef:
                 name: {{ include "n8n.fullname" . }}-webhook-secret
             {{- end }}
-
-          env: {{ not (empty .Values.webhook.extraEnv) | ternary nil "[]" }}
-            {{- range $key, $value := .Values.webhook.extraEnv }}
+          {{- $webhookExtraEnvRaw := include "n8n.normalizeExtraEnv" (default (dict) .Values.webhook.extraEnv) }}
+          {{- $webhookExtraEnv := dict -}}
+          {{- if $webhookExtraEnvRaw -}}
+            {{- $webhookExtraEnv = fromYaml $webhookExtraEnvRaw -}}
+          {{- end -}}
+          {{- if $webhookExtraEnv }}
+          env:
+            {{- range $key, $value := $webhookExtraEnv }}
             - name: {{ $key }}
               {{- toYaml $value | nindent 14 }}
             {{- end }}
+          {{- else }}
+          env: []
+          {{- end }}
           lifecycle:
             {{- toYaml .Values.webhook.lifecycle | nindent 12 }}
           securityContext:

@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "n8n.fullname" . }}
-  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "n8n.labels" . | nindent 4 }}
     {{- if .Values.main.deploymentLabels }}
@@ -73,7 +72,7 @@ spec:
             - secretRef:
                 name: {{ include "n8n.fullname" . }}-app-secret
             {{- end }}
-          {{- $mainExtraEnvRaw := include "n8n.mainMergedExtraEnv" . }}
+          {{- $mainExtraEnvRaw := include "n8n.normalizeExtraEnv" (default (dict) .Values.main.extraEnv) }}
           {{- $mainExtraEnv := dict -}}
           {{- if $mainExtraEnvRaw -}}
             {{- $mainExtraEnv = fromYaml $mainExtraEnvRaw -}}
@@ -82,7 +81,7 @@ spec:
           env:
             {{- range $key, $value := $mainExtraEnv }}
             - name: {{ $key }}
-              {{ toYaml $value | nindent 14 }}
+              {{- toYaml $value | nindent 14 }}
             {{- end }}
           {{- else }}
           env: []
@@ -91,7 +90,7 @@ spec:
             {{- toYaml .Values.main.lifecycle | nindent 12 }}
           ports:
             - name: http
-              containerPort: {{ get (default (dict) .Values.main.config.n8n) "port" | default 5678 }}
+              containerPort: {{ get (default (dict) .Values.main.config) "port" | default 5678 }}
               protocol: TCP
           {{- with .Values.main.livenessProbe }}
           livenessProbe:

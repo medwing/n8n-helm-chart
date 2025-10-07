@@ -3,7 +3,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "n8n.fullname" . }}-worker
-  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "n8n.labels" . | nindent 4 }}
     {{- if .Values.worker.deploymentLabels }}
@@ -15,7 +14,7 @@ metadata:
   {{- end }}
 spec:
   {{- if not .Values.worker.autoscaling.enabled }}
-  replicas: {{ .Values.worker.replicaCount }}
+  replicas: {{ .Values.worker.count }}
   {{- end }}
   strategy:
     type: {{ .Values.worker.deploymentStrategy.type }}
@@ -76,11 +75,20 @@ spec:
             - secretRef:
                 name: {{ include "n8n.fullname" . }}-worker-secret
             {{- end }}
-          env: {{ not (empty .Values.worker.extraEnv) | ternary nil "[]" }}
-            {{- range $key, $value := .Values.worker.extraEnv }}
+          {{- $workerExtraEnvRaw := include "n8n.normalizeExtraEnv" (default (dict) .Values.worker.extraEnv) }}
+          {{- $workerExtraEnv := dict -}}
+          {{- if $workerExtraEnvRaw -}}
+            {{- $workerExtraEnv = fromYaml $workerExtraEnvRaw -}}
+          {{- end -}}
+          {{- if $workerExtraEnv }}
+          env:
+            {{- range $key, $value := $workerExtraEnv }}
             - name: {{ $key }}
               {{- toYaml $value | nindent 14 }}
             {{- end }}
+          {{- else }}
+          env: []
+          {{- end }}
           {{- if .Values.worker.command }}
           command:
             {{- toYaml .Values.worker.command | nindent 12 }}
@@ -97,13 +105,13 @@ spec:
           {{- end }}
           ports:
             - name: http
-              containerPort: {{ get (default (dict) .Values.worker.config.n8n) "port" | default 5678 }}
+              containerPort: {{ get (default (dict) .Values.worker.config) "port" | default 5678 }}
               protocol: TCP
-          {{- with .Values.worker.livenessProbe }}
+          {{- with .Values.main.livenessProbe }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.worker.readinessProbe }}
+          {{- with .Values.main.readinessProbe }}
           readinessProbe:
             {{- toYaml . | nindent 12 }}
           {{- end }}

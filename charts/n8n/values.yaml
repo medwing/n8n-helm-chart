@@ -19,11 +19,6 @@ image:
   tag: ""
 imagePullSecrets: []
 
-# Configure opinionated defaults for known deployment patterns.
-#   ""           - No preset (default)
-#   "taskrunners" - Enable settings optimized for n8n 1.0+ internal task runners
-preset: ""
-
 # The Name to use for the chart. Will be the prefix of all resources aka. The Chart.Name (default is 'n8n')
 nameOverride:
 # Override the full name of the deployment. When empty, the name will be "{release-name}-{chart-name}" or the value of nameOverride if specified
@@ -45,10 +40,10 @@ ingress:
   hosts:
     - host: workflow.example.com
       paths: []
-  tls: []
-    # - hosts:
-    #    - workflow.example.com
-    #  secretName: host-domain-cert
+  tls:
+    - hosts:
+        - workflow.example.com
+      secretName: host-domain-cert
 
 # the main (n8n) application related configuration + Kubernetes specific settings
 # The config: {} dictionary is converted to environmental variables in the ConfigMap.
@@ -56,11 +51,6 @@ main:
   # See https://docs.n8n.io/hosting/configuration/environment-variables/ for all values.
   config: {}
   #    n8n:
-  #     license:
-  #       activation:
-  #         key: <N8N_LICENSE_ACTIVATION_KEY>
-  #     log:
-  #       level: info
   #    db:
   #      type: postgresdb
   #      postgresdb:
@@ -74,7 +64,7 @@ main:
   #     if you run n8n stateless, you should provide an encryption key here.
   #      encryption_key:
   #
-  #    db:
+  #    database:
   #      postgresdb:
   #        password: 'big secret'
 
@@ -86,12 +76,6 @@ main:
   #          name: db-app
   #          key: dbname
   #
-  taskRunners:
-    # Set to "internal" to enable the 1.0+ task runner architecture on the main pods.
-    mode: ""
-    # The execution mode that should be used when task runners are enabled.
-    executionsMode: "queue"
-
   # N8n Kubernetes specific settings
   #
   persistence:
@@ -246,7 +230,6 @@ main:
 
 
   service:
-    enabled: true
     annotations: {}
     # -- Service types allow you to specify what kind of Service you want.
     # E.g., ClusterIP, NodePort, LoadBalancer, ExternalName
@@ -293,6 +276,7 @@ worker:
   # Extra environmental variables, so you can reference other configmaps and secrets into n8n as env vars.
   extraEnv: {}
 
+  count: 2
   # Define the number of jobs a worker can run in parallel by using the concurrency flag. Default is 10
   concurrency: 10
 
@@ -327,7 +311,6 @@ worker:
     size: 1Gi
     # Use an existing PVC
     # existingClaim:
-
   # Number of desired pods.
   replicaCount: 1
 
