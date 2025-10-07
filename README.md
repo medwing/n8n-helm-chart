@@ -784,6 +784,49 @@ Key changes include:
 
 ## Scaling and Advanced Configuration Options
 
+n8n 1.0 introduced an internal task runner architecture that keeps queue
+processing close to the main application pods. This chart now ships with a
+`taskrunners` preset that configures the critical environment variables for that
+mode and avoids the conflicting combination of webhook pods without dedicated
+workers.
+
+### Internal task runners (n8n 1.0+)
+
+Use the preset to quickly enable the recommended configuration for a single
+powerful main pod or for installations that rely on sticky sessions:
+
+```yaml
+preset: taskrunners
+
+main:
+  # Optional explicit toggle if you prefer not to rely on the preset helper
+  taskRunners:
+    mode: internal
+
+  resources:
+    limits:
+      cpu: "8000m"
+      memory: "16Gi"
+
+webhook:
+  enabled: false
+
+worker:
+  enabled: false
+```
+
+The preset injects the following defaults into the main deployment (which you
+can still override via `main.extraEnv`):
+
+- `N8N_RUNNERS_ENABLED=true`
+- `OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS=false`
+- `EXECUTIONS_MODE=queue` (configurable via `main.taskRunners.executionsMode`)
+
+> **Heads-up:** External webhook pods enqueue jobs that must be consumed by a
+> worker deployment. When you enable task runners the chart now validates the
+> configuration and will fail Helm template rendering if `webhook.enabled=true`
+> and `worker.enabled=false`.
+
 n8n provides a **queue-mode**, where the workload is shared between multiple
 instances of the same n8n installation.
 This provides a shared load over multiple instances and limited high
