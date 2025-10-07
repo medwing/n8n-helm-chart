@@ -134,7 +134,23 @@ false
 {{- if $presetRaw -}}
   {{- $preset = fromYaml $presetRaw -}}
 {{- end -}}
-{{- $user := default (dict) .Values.main.extraEnv -}}
+{{- $userRaw := default (dict) .Values.main.extraEnv -}}
+{{- $user := dict -}}
+{{- if kindIs "map" $userRaw -}}
+  {{- $user = $userRaw -}}
+{{- else if kindIs "slice" $userRaw -}}
+  {{- range $env := $userRaw -}}
+    {{- if hasKey $env "name" -}}
+      {{- $entry := dict -}}
+      {{- range $k, $v := $env -}}
+        {{- if ne $k "name" -}}
+          {{- $_ := set $entry $k $v -}}
+        {{- end -}}
+      {{- end -}}
+      {{- $_ := set $user ($env.name | toString) $entry -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
 {{- $merged := merge (deepCopy $preset) (deepCopy $user) -}}
 {{- toYaml $merged -}}
 {{- end -}}
@@ -146,5 +162,4 @@ false
 {{- fail "External webhook pods rely on external workers when task runners are enabled. Disable webhooks or enable workers." -}}
 {{- end -}}
 {{- end -}}
-
 
